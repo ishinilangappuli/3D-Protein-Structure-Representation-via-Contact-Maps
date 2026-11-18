@@ -261,30 +261,26 @@ def reconstruct_structure(contact_map):
 # 5. STRUCTURE COMPARISON
 # ============================================================
 
+
 def compare_structures(original, reconstructed):
 
-    original_distances = cdist(
-        original,
-        original,
-        metric="euclidean"
-    )
+    # --------------------------------------------------------
+    # A. Calculate pairwise distance matrices
+    # --------------------------------------------------------
 
-    reconstructed_distances = cdist(
-        reconstructed,
-        reconstructed,
-        metric="euclidean"
-    )
+    original_distances = cdist(original, original)
+    reconstructed_distances = cdist(reconstructed, reconstructed)
 
-    # Use only the upper triangle (unique residue pairs)
-    upper_indices = np.triu_indices(
-        len(original),
-        k=1
-    )
+    # Use unique residue pairs only
+    upper_indices = np.triu_indices(len(original), k=1)
 
     true_values = original_distances[upper_indices]
     reconstructed_values = reconstructed_distances[upper_indices]
 
-    # Correlations
+    # --------------------------------------------------------
+    # B. Calculate correlations
+    # --------------------------------------------------------
+
     pearson_r, pearson_p = pearsonr(
         true_values,
         reconstructed_values
@@ -295,11 +291,14 @@ def compare_structures(original, reconstructed):
         reconstructed_values
     )
 
-    # Least-squares scale adjustment for pairwise distances
+    # --------------------------------------------------------
+    # C. Pairwise-distance scale adjustment
+    # --------------------------------------------------------
+
     denominator = np.sum(reconstructed_values ** 2)
 
     if denominator == 0:
-        raise ValueError("Cannot calculate scale factor.")
+        raise ValueError("Cannot calculate distance scale factor.")
 
     scale_factor = (
         np.sum(true_values * reconstructed_values)
@@ -308,9 +307,7 @@ def compare_structures(original, reconstructed):
 
     scaled_values = reconstructed_values * scale_factor
 
-    absolute_errors = np.abs(
-        true_values - scaled_values
-    )
+    absolute_errors = np.abs(true_values - scaled_values)
 
     mae = np.mean(absolute_errors)
     maximum_error = np.max(absolute_errors)
@@ -319,29 +316,30 @@ def compare_structures(original, reconstructed):
         np.mean((true_values - scaled_values) ** 2)
     )
 
-    # Scale + rotation + translation alignment for coordinate RMSD
+    # --------------------------------------------------------
+    # D. Coordinate alignment (rotation/reflection + scale)
+    # --------------------------------------------------------
+
     original_centered = original - np.mean(original, axis=0)
 
     reconstructed_centered = (
         reconstructed - np.mean(reconstructed, axis=0)
     )
 
-    covariance = (
-        reconstructed_centered.T @ original_centered
-    )
+    covariance = reconstructed_centered.T @ original_centered
 
     U, singular_values, Vt = np.linalg.svd(covariance)
 
-    correction = np.eye(3)
+    # Allow reflection because MDS has mirror ambiguity
+    rotation = U @ Vt
 
-    if np.linalg.det(U @ Vt) < 0:
-        correction[-1, -1] = -1
+    coordinate_denominator = np.sum(reconstructed_centered ** 2)
 
-    rotation = U @ correction @ Vt
+    if coordinate_denominator == 0:
+        raise ValueError("Cannot calculate coordinate scale factor.")
 
     coordinate_scale = (
-        np.sum(singular_values * np.diag(correction))
-        / np.sum(reconstructed_centered ** 2)
+        np.sum(singular_values) / coordinate_denominator
     )
 
     aligned = (
@@ -350,7 +348,7 @@ def compare_structures(original, reconstructed):
         @ rotation
     )
 
-    aligned = aligned + np.mean(original, axis=0)
+    aligned += np.mean(original, axis=0)
 
     aligned_rmsd = np.sqrt(
         np.mean(
@@ -358,12 +356,17 @@ def compare_structures(original, reconstructed):
         )
     )
 
+    # --------------------------------------------------------
+    # E. Return results
+    # --------------------------------------------------------
+
     return {
         "Pearson_correlation": pearson_r,
         "Pearson_p_value": pearson_p,
         "Spearman_correlation": spearman_r,
         "Spearman_p_value": spearman_p,
         "Scale_factor": scale_factor,
+        "Coordinate_scale_factor": coordinate_scale,
         "Mean_absolute_error_A": mae,
         "Maximum_absolute_error_A": maximum_error,
         "Distance_RMSE_A": rmse,
