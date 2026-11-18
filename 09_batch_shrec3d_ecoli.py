@@ -110,11 +110,12 @@ def get_coordinate_file(entity_key, validation_df):
     return None
 
 
+
 def load_coordinates(csv_file):
 
     df = pd.read_csv(csv_file)
 
-    # Remove accidental spaces from column names
+    # Normalize column names
     df.columns = df.columns.str.strip()
 
     required = [
@@ -123,49 +124,36 @@ def load_coordinates(csv_file):
         "Z_Angstrom"
     ]
 
-    for col in required:
-        if col not in df.columns:
-            raise ValueError(
-                f"Missing coordinate column: {col}. "
-                f"Available columns: {list(df.columns)}"
-            )
+    missing = [
+        col for col in required
+        if col not in df.columns
+    ]
 
-    # Extract C-alpha coordinates
-    df = df.dropna(
-        subset=required
-    ).reset_index(drop=True)
+    if missing:
+        raise ValueError(
+            f"Missing columns: {missing}. "
+            f"Available: {list(df.columns)}"
+        )
+
+    # Extract coordinates
+    df = df.dropna(subset=required).reset_index(drop=True)
 
     coordinates = df[
-        required
+        ["X_Angstrom", "Y_Angstrom", "Z_Angstrom"]
     ].to_numpy(dtype=float)
 
     if len(coordinates) < 4:
-        raise ValueError(
-            "Not enough C-alpha coordinates."
-        )
+        raise ValueError("Not enough coordinates.")
 
     if not np.isfinite(coordinates).all():
-        raise ValueError(
-            "Coordinates contain invalid values."
-        )
+        raise ValueError("Invalid coordinate values.")
 
-    # Create residue labels
-    if (
-        "Residue_Number" in df.columns
-        and "Residue_Name" in df.columns
-    ):
-
-        residue_labels = (
-            df["Residue_Number"].astype(str)
-            + "_"
-            + df["Residue_Name"].astype(str)
-        ).tolist()
-
-    else:
-
-        residue_labels = [
-            str(i + 1) for i in range(len(coordinates))
-        ]
+    # Residue labels
+    residue_labels = (
+        df["Residue_Number"].astype(str)
+        + "_"
+        + df["Residue_Name"].astype(str)
+    ).tolist()
 
     return coordinates, residue_labels
 
