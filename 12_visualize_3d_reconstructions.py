@@ -7,25 +7,18 @@ from pathlib import Path
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 
-
-# ============================================================
-# 1. PROJECT SETTINGS
-# ============================================================
-
 PROJECT_DIR = Path(
     r"C:\Users\ishin\OneDrive\Desktop\Complex_Networks"
     r"\3D-Protein-Structure-Representation-via-Contact-Maps"
 )
 
 DATASET_DIR = PROJECT_DIR / "ecoli_dataset"
-
 COORDINATE_DIR = DATASET_DIR / "coordinates"
 METADATA_DIR = DATASET_DIR / "metadata"
 
 VALIDATION_FILE = (
     METADATA_DIR / "ecoli_coordinate_validation_summary.csv"
 )
-
 OUTPUT_DIR = PROJECT_DIR / "results_ecoli_8A"
 
 SUMMARY_FILE = (
@@ -41,13 +34,8 @@ VISUALIZATION_DIR = (
 )
 
 VISUALIZATION_DIR.mkdir(parents=True, exist_ok=True)
-
 DPI = 300
 
-
-# ============================================================
-# 2. HELPER FUNCTIONS
-# ============================================================
 
 def find_column(df, possible_names):
 
@@ -179,9 +167,6 @@ def load_aligned_coordinates(csv_file):
     return coordinates, df
 
 
-# ============================================================
-# 3. 3D PLOTTING FUNCTION
-# ============================================================
 
 def set_equal_axes(ax, all_coordinates):
 
@@ -348,10 +333,6 @@ def create_comparison_plot(
     plt.close(fig)
 
 
-# ============================================================
-# 4. LOAD SUMMARY AND VALIDATION DATA
-# ============================================================
-
 print("\nLoading reconstruction results...")
 
 if not SUMMARY_FILE.exists():
@@ -378,10 +359,6 @@ print("Successful reconstructions:", len(successful_df))
 print("\nStarting 3D visualisation...")
 
 
-# ============================================================
-# 5. GENERATE VISUALISATIONS
-# ============================================================
-
 visualization_results = []
 
 for index, row in successful_df.iterrows():
@@ -398,11 +375,6 @@ for index, row in successful_df.iterrows():
     }
 
     try:
-
-        # ----------------------------------------------------
-        # Find original coordinate file
-        # ----------------------------------------------------
-
         original_file = get_coordinate_file(
             protein,
             validation_df
@@ -412,10 +384,6 @@ for index, row in successful_df.iterrows():
             raise FileNotFoundError(
                 f"Original coordinate file not found: {protein}"
             )
-
-        # ----------------------------------------------------
-        # Find aligned reconstructed coordinates
-        # ----------------------------------------------------
 
         aligned_file = (
             RECONSTRUCTION_DIR
@@ -427,10 +395,6 @@ for index, row in successful_df.iterrows():
                 f"Aligned coordinate file not found:\n{aligned_file}"
             )
 
-        # ----------------------------------------------------
-        # Load both structures
-        # ----------------------------------------------------
-
         original, original_df = load_original_coordinates(
             original_file
         )
@@ -438,11 +402,7 @@ for index, row in successful_df.iterrows():
         reconstructed, reconstructed_df = (
             load_aligned_coordinates(aligned_file)
         )
-
-        # ----------------------------------------------------
-        # Verify residue counts
-        # ----------------------------------------------------
-
+        
         if len(original) != len(reconstructed):
 
             raise ValueError(
@@ -450,10 +410,6 @@ for index, row in successful_df.iterrows():
                 f"original={len(original)}, "
                 f"reconstructed={len(reconstructed)}"
             )
-
-        # ----------------------------------------------------
-        # Verify residue ordering where labels are available
-        # ----------------------------------------------------
 
         if (
             "Residue" in original_df.columns
@@ -474,11 +430,7 @@ for index, row in successful_df.iterrows():
                     "Residue ordering does not match between "
                     "original and reconstructed structures."
                 )
-
-        # ----------------------------------------------------
-        # Create output figure
-        # ----------------------------------------------------
-
+        
         output_file = (
             VISUALIZATION_DIR
             / f"{protein}_3D_comparison.png"
@@ -514,11 +466,6 @@ for index, row in successful_df.iterrows():
 
     visualization_results.append(result)
 
-
-# ============================================================
-# 6. SAVE VISUALISATION REPORT
-# ============================================================
-
 visualization_df = pd.DataFrame(
     visualization_results
 )
@@ -533,12 +480,7 @@ visualization_df.to_csv(
     index=False
 )
 
-
-# ============================================================
-# 7. FINAL REPORT
-# ============================================================
-
-print("\n" + "=" * 60)
+print("\n" + "\n")
 print("3D VISUALISATION COMPLETED")
 print("=" * 60)
 

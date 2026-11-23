@@ -3,10 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-# ============================================================
-# 1. PROJECT SETTINGS
-# ============================================================
-
 PROJECT_DIR = Path(
     r"C:\Users\ishin\OneDrive\Desktop\Complex_Networks"
     r"\3D-Protein-Structure-Representation-via-Contact-Maps"
